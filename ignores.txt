@@ -1,2 +1,1 @@
-
-Code/SRGAN/disc.pth.tar
+The following files are ignored during commit.
