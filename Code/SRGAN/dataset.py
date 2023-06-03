@@ -71,7 +71,7 @@ class MyImageFolder(Dataset):
 
 
 def test():
-    dataset = MyImageFolder(root_dir="D:\\xuqichen\\lightfield_mini\\train\\")
+    dataset = MyImageFolder(root_dir="D:\\xuqichen\\Code\\lightfield_mini\\train\\")
     loader = DataLoader(dataset, batch_size=2, num_workers=8)
 
     for (low_res_deq, high_res_image) in loader:
