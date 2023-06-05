@@ -125,38 +125,33 @@ class ResidualBlock(nn.Module):
             stride=1,
             padding=1
         )
-        self.block2 = ConvBlockPool2(
-            in_channels,
-            in_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            use_act=False,
-        )
-        self.pool = nn.AdaptiveAvgPool3d((None, None, 4))
+        self.conv2 = nn.Conv3d(in_channels, in_channels, kernel_size=(3, 3),stride=(1, 1), padding=1)
+        self.bn = nn.BatchNorm3d(in_channels)
 
     def forward(self, x):
         out = self.block1(x)
-        out = self.block2(out)
-        return out + self.pool(x)
+        out = self.bn(self.conv2(out))
+        return out + x
 
 
 class Generator(nn.Module):
     def __init__(self, in_channels=3, num_channels=64, num_blocks=16):
         super().__init__()
-        self.initial = ConvBlockPool2(in_channels, num_channels, kernel_size=9, stride=1, padding=4, use_bn=False)
+        self.initial =  nn.Conv3d(in_channels, num_channels, kernel_size=3, stride=1, padding=1)
         self.residuals = nn.Sequential(*[ResidualBlock(num_channels) for _ in range(num_blocks)])
         self.convblock = ConvBlockPool4(num_channels, num_channels, kernel_size=3, stride=1, padding=1, use_act=False)
-        self.pool = nn.MaxPool3d((1, 1, 16), stride=(1, 1, 16))
+        self.pool16 = nn.MaxPool3d((1, 1, 16), stride=(1, 1, 16))
+        self.pool2 = nn.MaxPool3d((1, 1, 2), stride=(1, 1, 2))
         self.upsamples = nn.Sequential(UpsampleBlock(num_channels, 2), UpsampleBlock(num_channels, 2))
         self.final = nn.Conv2d(num_channels, in_channels, kernel_size=9, stride=1, padding=4)
+        self.relu = torch.nn.ReLU()
 
     def forward(self, x):
-        initial = self.initial(x)
+        initial = self.pool2(self.relu(self.initial(x)))
         # print("init", initial.size())
         x = self.residuals(initial)
         # print("res", x.size())
-        x = self.convblock(x) + self.pool(initial)
+        x = self.convblock(x) + self.pool16(initial)
         # print("conv", x.size())
         x = x.squeeze(dim=-1)
         # print("before upsample", x.size())

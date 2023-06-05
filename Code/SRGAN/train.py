@@ -48,19 +48,21 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss, writer):
 
         writer.add_scalar("Loss/Discriminator", loss_disc.item(), idx)
         writer.add_scalar("Loss/Generator", gen_loss.item(), idx)
+        print("disc_loss", loss_disc.item())
+        print("gen_loss", loss_gen.item())
 
         opt_gen.zero_grad()
         gen_loss.backward()
         opt_gen.step()
 
         if idx % 200 == 0:
-            plot_examples("D:\\XuQichen\\lightfield_mini\\val\\LF_32\\", gen)
+            plot_examples("D:\\XuQichen\\LightField\\Code\\lightfield_mini\\val\\LF_32\\", gen)
 
 
 
 def main():
     writer = SummaryWriter()
-    dataset = MyImageFolder(root_dir="D:\\XuQichen\\lightfield_mini\\train\\")
+    dataset = MyImageFolder(root_dir="D:\\XuQichen\\LightField\\Code\\lightfield_mini\\train\\")
     loader = DataLoader(
         dataset,
         batch_size=config.BATCH_SIZE,

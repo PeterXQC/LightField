@@ -76,5 +76,5 @@ def plot_examples(low_res_folder, gen):
 
             upscaled_img = gen(processed_lr_tensor.unsqueeze(0).to(config.DEVICE)
             )
-        save_image(upscaled_img * 0.5 + 0.5, f"D:\\XuQichen\\Code\\SRGAN\\saved\\{file}")
+        save_image(upscaled_img * 0.5 + 0.5, f"D:\\XuQichen\\LightField\\Code\\SRGAN\\saved\\{file}")
     gen.train()
