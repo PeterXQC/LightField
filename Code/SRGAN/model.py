@@ -238,10 +238,8 @@ class Discriminator(nn.Module):
         # print(np.shape(x))
         x = self.lrelu9(self.dense1(x))
         logits = self.dense2(x)
-        n = torch.sigmoid(logits)
-        return n
-
-
+        # n = torch.sigmoid(logits)
+        return logits
 
 def test():
     low_resolution = 64  # 96x96x96 -> 24x24x24

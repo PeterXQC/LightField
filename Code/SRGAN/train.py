@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 torch.backends.cudnn.benchmark = True
 
 
-def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss, writer):
+def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss, writer, LAMBDA_GP):
     loop = tqdm(loader, leave=True)
 
     # for (low_res, high_res) in loop:
@@ -28,15 +28,20 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss, writer):
         ### Train Discriminator: max log(D(x)) + log(1 - D(G(z)))
         fake = gen(low_res)
         disc_real = disc(high_res)
-        disc_fake = disc(fake.detach())
+        disc_fake = disc(fake)
+
+        # disc_loss_real = bce(
+        #     disc_real, torch.ones_like(disc_real) - 0.1 * torch.rand_like(disc_real)
+        # )
+        # disc_loss_fake = bce(disc_fake, torch.zeros_like(disc_fake))
         disc_loss_real = bce(
-            disc_real, torch.ones_like(disc_real) - 0.1 * torch.rand_like(disc_real)
+            disc_real, torch.ones_like(disc_real)
         )
         disc_loss_fake = bce(disc_fake, torch.zeros_like(disc_fake))
-        loss_disc = disc_loss_fake + disc_loss_real
+        loss_disc = disc_loss_fake + disc_loss_real + LAMBDA_GP*gradient_penalty(disc, high_res, fake, device=config.DEVICE)
 
         opt_disc.zero_grad()
-        loss_disc.backward()
+        loss_disc.backward(retain_graph=True)
         opt_disc.step()
 
         # Train Generator: min log(1 - D(G(z))) <-> max log(D(G(z))
@@ -49,7 +54,7 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss, writer):
         writer.add_scalar("Loss/Discriminator", loss_disc.item(), idx)
         writer.add_scalar("Loss/Generator", gen_loss.item(), idx)
         print("disc_loss", loss_disc.item())
-        print("gen_loss", loss_gen.item())
+        print("gen_loss", gen_loss.item())
 
         opt_gen.zero_grad()
         gen_loss.backward()
@@ -58,7 +63,40 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss, writer):
         if idx % 200 == 0:
             plot_examples("D:\\XuQichen\\LightField\\Code\\lightfield_mini\\val\\LF_32\\", gen)
 
+def print_grads(module, grad_input, grad_output):
+    # calculate gradient norms
+    grad_input_norms = [torch.norm(g.detach()) if g is not None else None for g in grad_input]
+    grad_output_norms = [torch.norm(g.detach()) if g is not None else None for g in grad_output]
 
+    # condition to print information
+    if any(g < 1e-10 for g in grad_input_norms if g is not None) or \
+        any(g < 1e-10 for g in grad_output_norms if g is not None):
+        print('Inside ' + module.__class__.__name__ + ' backward')
+        print('Inside class:' + module.__class__.__name__)
+        print('grad_input norm: ', grad_input_norms)
+        print('grad_output norm: ', grad_output_norms)
+
+
+def gradient_penalty(critic, real, fake, device="cpu"):
+    BATCH_SIZE, C, H, W = real.shape
+    alpha = torch.rand((BATCH_SIZE, 1, 1, 1)).repeat(1, C, H, W).to(device)
+    interpolated_images = real * alpha + fake * (1 - alpha)
+
+    # Calculate critic scores
+    mixed_scores = critic(interpolated_images)
+
+    # Take the gradient of the scores with respect to the images
+    gradient = torch.autograd.grad(
+        inputs=interpolated_images,
+        outputs=mixed_scores,
+        grad_outputs=torch.ones_like(mixed_scores),
+        create_graph=True,
+        retain_graph=True,
+    )[0]
+    gradient = gradient.view(gradient.shape[0], -1)
+    gradient_norm = gradient.norm(2, dim=1)
+    gradient_penalty = torch.mean((gradient_norm - 1) ** 2)
+    return gradient_penalty
 
 def main():
     writer = SummaryWriter()
@@ -81,6 +119,12 @@ def main():
 
     gen = Generator(in_channels=1).to(config.DEVICE)
     disc = Discriminator(in_channels=1).to(config.DEVICE)
+
+    # for module in gen.modules():
+    #     module.register_backward_hook(print_grads)
+    # for module in disc.modules():
+    #     module.register_backward_hook(print_grads)
+
     opt_gen = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE, betas=(0.9, 0.999))
     opt_disc = optim.Adam(disc.parameters(), lr=config.LEARNING_RATE, betas=(0.9, 0.999))
     mse = nn.MSELoss()
@@ -99,8 +143,8 @@ def main():
         )
 
     for epoch in range(config.NUM_EPOCHS):
-        train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss, writer)
-        print("epoch", epoch)
+        train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss, writer, config.LAMBDA_GP)
+        print("epoch", epoch+1)
         if config.SAVE_MODEL:
             save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
             save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
