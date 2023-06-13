@@ -39,7 +39,7 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.use_act = use_act
         self.cnn = nn.Conv3d(in_channels, out_channels, **kwargs, bias=not use_bn)
-        self.bn = nn.BatchNorm3d(out_channels) if use_bn else nn.Identity()
+        self.bn = nn.Identity()
         self.act = (
             nn.LeakyReLU(0.2, inplace=True)
             if discriminator
@@ -63,7 +63,7 @@ class ConvBlockPool2(nn.Module):
         super().__init__()
         self.use_act = use_act
         self.cnn = nn.Conv3d(in_channels, out_channels, **kwargs, bias=not use_bn)
-        self.bn = nn.BatchNorm3d(out_channels) if use_bn else nn.Identity()
+        self.bn = nn.Identity()
         self.act = (
             nn.LeakyReLU(0.2, inplace=True)
             if discriminator
@@ -90,7 +90,7 @@ class ConvBlockPool8(nn.Module):
         super().__init__()
         self.use_act = use_act
         self.cnn = nn.Conv3d(in_channels, out_channels, **kwargs, bias=not use_bn)
-        self.bn = nn.BatchNorm3d(out_channels) if use_bn else nn.Identity()
+        self.bn = nn.Identity()
         self.act = (
             nn.LeakyReLU(0.2, inplace=True)
             if discriminator
@@ -126,8 +126,7 @@ class ResidualBlock(nn.Module):
             padding=1
         )
         self.conv2 = nn.Conv3d(in_channels, in_channels, kernel_size=3, stride=1, padding=1)
-        self.bn = nn.BatchNorm3d(in_channels)
-
+        self.bn = nn.Identity
     def forward(self, x):
         out = self.block1(x)
         out = self.bn(self.conv2(out))
@@ -163,36 +162,6 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    # def __init__(self, in_channels=1, features=[64, 64, 128, 128, 256, 256, 512, 512]):
-    #     super().__init__()
-    #     blocks = []
-    #     for idx, feature in enumerate(features):
-    #         blocks.append(
-    #             ConvBlock2(
-    #                 in_channels,
-    #                 feature,
-    #                 kernel_size=3,
-    #                 stride=1 + idx % 2,
-    #                 padding=1,
-    #                 discriminator=True,
-    #                 use_act=True,
-    #                 use_bn=False if idx == 0 else True,
-    #             )
-    #         )
-    #         in_channels = feature
-
-    #     self.blocks = nn.Sequential(*blocks)
-    #     self.classifier = nn.Sequential(
-    #         nn.AdaptiveAvgPool2d((6, 6)),
-    #         nn.Flatten(),
-    #         nn.Linear(512*6*6, 1024),
-    #         nn.LeakyReLU(0.2, inplace=True),
-    #         nn.Linear(1024, 1),
-    #     )
-
-    # def forward(self, x):
-    #     x = self.blocks(x)
-    #     return self.classifier(x)
     def __init__(self, in_channels=1):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1)
