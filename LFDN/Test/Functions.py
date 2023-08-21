@@ -172,44 +172,34 @@ def ResizeLF(lf,scale_factor):
 
 def CropLF(lf,patchSize, stride): #lf [b,u,v,x,y,c]
     b,u,v,x,y,c=lf.shape
-    numX=len(range(0,x-patchSize,stride))
-    numY=len(range(0,y-patchSize,stride))
+    numX=len(range(0,x,stride))
+    numY=len(range(0,y,stride))
 
     lfStack=torch.zeros(b,numX*numY,u,v,patchSize,patchSize,c)
 
     indCurrent=0
-    for i in range(0,x-patchSize,stride):
-        for j in range(0,y-patchSize,stride):
+    for i in range(0,x,stride):
+        for j in range(0,y,stride):
             lfPatch=lf[:,:,:,i:i+patchSize,j:j+patchSize,:]
             lfStack[:,indCurrent,:,:,:,:,:]=lfPatch
             indCurrent=indCurrent+1
 
     return lfStack, [numX,numY] #lfStack [b,n,u,v,x,y,c] 
 
-
 def MergeLF(lfStack, coordinate, overlap):
-    b,n,u,v,x,y,c=lfStack.shape
-    
-    xMerged=coordinate[0]*x-coordinate[0]*overlap
-    yMerged=coordinate[1]*y-coordinate[1]*overlap
+    b, n, u, v, x, y, c = lfStack.shape
 
-    lfMerged=torch.zeros(b,u,v,xMerged,yMerged,c)
+    xMerged = coordinate[0] * x
+    yMerged = coordinate[1] * y
+
+    lfMerged = torch.zeros(b, u, v, xMerged, yMerged, c)
     for i in range(coordinate[0]):
         for j in range(coordinate[1]):
-            lfMerged[:,
-                     :,
-                     :,
-                     i*(x-overlap):(i+1)*(x-overlap),
-                     j*(y-overlap):(j+1)*(y-overlap),
-                     :]=lfStack[:,
-                                i*coordinate[1]+j,
-                                :,
-                                :,
-                                overlap//2:-overlap//2,
-                                overlap//2:-overlap//2,
-                                :] 
-            
-    return lfMerged # [b,u,v,x,y,c]
+            lfMerged[:, :, :, i*x:(i+1)*x, j*y:(j+1)*y, :] = \
+                lfStack[:, i*coordinate[1]+j, :, :, :, :, :]
+
+    return lfMerged
+
 
 def ComptPSNR(img1, img2):
     mse = np.mean( (img1 - img2) ** 2 )

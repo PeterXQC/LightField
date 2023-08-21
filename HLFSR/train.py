@@ -9,6 +9,7 @@ from utils.utils_datasets import TrainSetDataLoader, MultiTestSetDataLoader
 from collections import OrderedDict
 import imageio
 import torchvision.transforms as transforms
+import scipy
 
 
 def main(args):
@@ -138,7 +139,7 @@ def main(args):
                     save_dir = epoch_dir.joinpath(test_name)
                     save_dir.mkdir(exist_ok=True)
 
-                    psnr_iter_test, ssim_iter_test, LF_name = test(test_loader, device, net, save_dir)
+                    psnr_iter_test, ssim_iter_test, LF_name = test(test_loader, device, net, idx_epoch, save_dir)
                     excel_file.write_sheet(test_name, LF_name, psnr_iter_test, ssim_iter_test)
 
                     psnr_epoch_test = float(np.array(psnr_iter_test).mean())
@@ -178,7 +179,7 @@ def train(train_loader, device, net, criterion, optimizer):
         label = label[:,:,my_x_dim//5*2:my_x_dim//5*3,my_y_dim//5*2:my_y_dim//5*3]
 
         label = label.to(device)    # high resolution
-        out = net(data, data_info)
+        out, _, _, _, _, _ = net(data, data_info)
 
         # my_tmp = np.squeeze(label[0,:,:,:].cpu().detach().numpy())
         # plt.imshow(my_tmp)
@@ -205,7 +206,9 @@ def train(train_loader, device, net, criterion, optimizer):
     return loss_epoch_train, psnr_epoch_train, ssim_epoch_train
 
 
-def test(test_loader, device, net, save_dir=None):
+
+
+def test(test_loader, device, net, idx_epoch, save_dir=None):
     LF_iter_test = []
     psnr_iter_test = []
     ssim_iter_test = []
@@ -227,7 +230,8 @@ def test(test_loader, device, net, save_dir=None):
             with torch.no_grad():
                 net.eval()
                 torch.cuda.empty_cache()
-                out = net(tmp.to(device), data_info)
+                out, HFEM_1_out, HFEM_2_out, HFEM_3_out, HFEM_4_out, HFEM_5_out = net(tmp.to(device), data_info)
+
                 subLFout= out
 
         ''' Calculate the PSNR & SSIM '''
@@ -240,14 +244,28 @@ def test(test_loader, device, net, save_dir=None):
         ssim_iter_test.append(ssim)
         LF_iter_test.append(LF_name[0])
 
-        ''' Save RGB '''
+        ''' Save mid-result '''
+
+        if save_dir is not None and idx_epoch % 10 == 0:
+            save_dir_ = save_dir.joinpath(LF_name[0])
+            save_dir_.mkdir(exist_ok=True)
+
+            # Save HFEM outputs
+            for i, HFEM_out in enumerate([HFEM_1_out, HFEM_2_out, HFEM_3_out, HFEM_4_out, HFEM_5_out], 1):
+                HFEM_out = HFEM_out.cpu().detach()  # Detach from the computation graph and move to CPU memory
+                HFEM_out_dict = {f"channel_{j}": HFEM_out[0, j, :, :].numpy() for j in range(HFEM_out.shape[1])}  # Create a dictionary with all channels
+                scipy.io.savemat(save_dir_.joinpath(f"{LF_name[0]}_HFEM_{i}_out_{idx_epoch}.mat"), HFEM_out_dict)  # Save the dictionary to a .mat file
+            
+        print('saved')
+        pass
+
+        '''save out'''
         if save_dir is not None:
             save_dir_ = save_dir.joinpath(LF_name[0])
             save_dir_.mkdir(exist_ok=True)
-            path = str(save_dir_) + '/' + LF_name[0] + '_' + 'CenterView.png'
             img = torch.squeeze(torch.clamp(subLFout, 0, 1))
             img = transforms.ToPILImage()(img)
-            img.save(path, format='PNG')
+            img.save(f"{LF_name[0]}_CenterView_{idx_epoch}.png", format='PNG')
             # imageio.imwrite(path, img)
         pass
 
@@ -260,7 +278,7 @@ if __name__ == '__main__':
     args.model_name = 'HLFSR'
     args.angRes = 5
     args.scale_factor = 4
-    args.batch_size = 4
+    args.batch_size = 1
     args.patch_size_for_test=1
 
     main(args)

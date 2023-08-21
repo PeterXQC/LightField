@@ -1,0 +1,30 @@
+Namespace(sigma=10, stageNum=3, angResolution=5.0, batchSize=1, cropPatchSize=32, overlap=4, channelNum=1, modelPath='D:\\XuQichen\\LightField\\LFDN\\Test\\model\\lfdn_SASOnly_Res10.pth', dataPath='D:\\XuQichen\\LightField\\LFDN\\LFData\\test_data.mat', savePath='D:\\XuQichen\\LightField\\LFDN\\Denoised\\')
+Index: 1  PSNR: 19.96  SSIM: 0.256
+Index: 2  PSNR: 19.74  SSIM: 0.624
+Index: 3  PSNR: 19.87  SSIM: 0.472
+Index: 4  PSNR: 19.77  SSIM: 0.596
+Index: 5  PSNR: 19.94  SSIM: 0.258
+Index: 6  PSNR: 19.73  SSIM: 0.622
+Index: 7  PSNR: 19.80  SSIM: 0.468
+Index: 8  PSNR: 19.75  SSIM: 0.592
+Index: 9  PSNR: 19.95  SSIM: 0.252
+Index: 10  PSNR: 19.71  SSIM: 0.623
+Index: 11  PSNR: 19.80  SSIM: 0.466
+Index: 12  PSNR: 19.74  SSIM: 0.591
+Index: 13  PSNR: 19.94  SSIM: 0.255
+Index: 14  PSNR: 19.75  SSIM: 0.624
+Index: 15  PSNR: 19.87  SSIM: 0.471
+Index: 16  PSNR: 19.76  SSIM: 0.591
+Index: 17  PSNR: 19.96  SSIM: 0.251
+Index: 18  PSNR: 19.75  SSIM: 0.620
+Index: 19  PSNR: 19.87  SSIM: 0.467
+Index: 20  PSNR: 19.77  SSIM: 0.586
+Index: 21  PSNR: 19.91  SSIM: 0.249
+Index: 22  PSNR: 19.77  SSIM: 0.619
+Index: 23  PSNR: 19.84  SSIM: 0.465
+Index: 24  PSNR: 19.77  SSIM: 0.583
+Index: 25  PSNR: 19.91  SSIM: 0.247
+Index: 26  PSNR: 19.72  SSIM: 0.614
+Index: 27  PSNR: 19.82  SSIM: 0.459
+Index: 28  PSNR: 19.72  SSIM: 0.568
+Average PSNR: 19.82  SSIM: 0.482

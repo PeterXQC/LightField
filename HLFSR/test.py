@@ -103,7 +103,7 @@ if __name__ == '__main__':
     args.scale_factor = 4
     args.batch_size = 1
     args.patch_size_for_test = 1
-    args.path_pre_pth ='./log/SR_5x5_4x/ALL/HLFSR/checkpoints/HLFSR_5x5_4x_epoch_51_model.pth'
+    args.path_pre_pth ='D:\XuQichen\LightField\HLFSR\weights\\HLFSR_5x5_4x_epoch_51_model.pth'
 
     main(args)
     print('end')

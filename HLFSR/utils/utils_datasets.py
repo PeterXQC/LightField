@@ -50,30 +50,32 @@ class TrainSetDataLoader(Dataset):
         self.angRes_in = args.angRes_in
         self.angRes_out = args.angRes_out
         if args.task == 'SR':
-            self.dataset_dir = args.path_for_train + 'SR_' + str(args.angRes_in) + 'x' + str(args.angRes_in) + '_' + \
-                               str(args.scale_factor) + 'x/'
+            self.dataset_dir = args.path_for_train
         elif args.task == 'RE':
-            self.dataset_dir = args.path_for_train + 'RE_' + str(args.angRes_in) + 'x' + str(args.angRes_in) + '_' + \
-                               str(args.angRes_out) + 'x' + str(args.angRes_out) + '/'
+            self.dataset_dir = args.path_for_train
             pass
 
-        if args.data_name == 'ALL':
-            self.data_list = os.listdir(self.dataset_dir)
-        else:
-            self.data_list = [args.data_name]
-
+        # if args.data_name == 'ALL':
+        tmp_list = os.listdir(self.dataset_dir)
         self.file_list = []
-        for data_name in self.data_list:
-            tmp_list = os.listdir(self.dataset_dir + data_name)
-            for index, _ in enumerate(tmp_list):
-                tmp_list[index] = data_name + '/' + tmp_list[index]
+        for index, _ in enumerate(tmp_list):
+            self.file_list.append(os.path.join(self.dataset_dir, tmp_list[index]))
+        # else:
+        #     self.data_list = [args.data_name]
 
-            self.file_list.extend(tmp_list)
+        # self.file_list = []
+        # for data_name in self.data_list:
+        #     data_folder = self.dataset_dir
+        #     tmp_list = os.listdir(data_folder)
+        #     for index, _ in enumerate(tmp_list):
+        #         tmp_list[index] = os.path.join(data_folder, tmp_list[index])
+
+        #     self.file_list.extend(tmp_list)
 
         self.item_num = len(self.file_list)
 
     def __getitem__(self, index):
-        file_name = [self.dataset_dir + self.file_list[index]]
+        file_name = [self.file_list[index]]
         with h5py.File(file_name[0], 'r') as hf:
             Lr_SAI_y = np.array(hf.get('Lr_SAI_y')) # Lr_SAI_y
             Hr_SAI_y = np.array(hf.get('Hr_SAI_y')) # Hr_SAI_y
@@ -93,55 +95,62 @@ class TrainSetDataLoader(Dataset):
 def MultiTestSetDataLoader(args):
     # get testdataloader of every test dataset
     data_list = None
-    if args.data_name in ['ALL', 'RE_Lytro', 'RE_HCI']:
-        if args.task == 'SR':
-            dataset_dir = args.path_for_test + 'SR_' + str(args.angRes_in) + 'x' + str(args.angRes_in) + '_' + \
-                          str(args.scale_factor) + 'x/'
-            data_list = os.listdir(dataset_dir)
-        elif args.task == 'RE':
-            dataset_dir = args.path_for_test + 'RE_' + str(args.angRes_in) + 'x' + str(args.angRes_in) + '_' + \
-                          str(args.angRes_out) + 'x' + str(args.angRes_out) + '/' + args.data_name
-            data_list = os.listdir(dataset_dir)
-    else:
-        data_list = [args.data_name]
+    # if args.data_name in ['ALL', 'RE_Lytro', 'RE_HCI']:
+    #     if args.task == 'SR':
+    dataset_dir = args.path_for_test
+    #         data_list = os.listdir(dataset_dir)
+    #     elif args.task == 'RE':
+    #         dataset_dir = args.path_for_test
+    #         data_list = os.listdir(dataset_dir)
+    # else:
+    data_list = [args.data_name]
 
     test_Loaders = []
     length_of_tests = 0
-    for data_name in data_list:
-        test_Dataset = TestSetDataLoader(args, data_name, Lr_Info=data_list.index(data_name))
-        length_of_tests += len(test_Dataset)
+    # for data_name in data_list:
+    #     test_Dataset = TestSetDataLoader(args, data_name, Lr_Info=data_list.index(data_name))
+    #     length_of_tests += len(test_Dataset)
 
-        test_Loaders.append(DataLoader(dataset=test_Dataset, num_workers=args.num_workers, batch_size=1, shuffle=False))
+    #     test_Loaders.append(DataLoader(dataset=test_Dataset, num_workers=args.num_workers, batch_size=1, shuffle=False))
+
+    test_Dataset = TestSetDataLoader(args, dataset_dir)
+    length_of_tests += len(test_Dataset)
+    test_Loaders.append(DataLoader(dataset=test_Dataset, num_workers=args.num_workers, batch_size=1, shuffle=False))
 
     return data_list, test_Loaders, length_of_tests
 
 
 class TestSetDataLoader(Dataset):
-    def __init__(self, args, data_name = 'ALL', Lr_Info=None):
+    def __init__(self, args, data_name='ALL', Lr_Info=None):
         super(TestSetDataLoader, self).__init__()
         self.angRes_in = args.angRes_in
         self.angRes_out = args.angRes_out
-        if args.task == 'SR':
-            self.dataset_dir = args.path_for_test + 'SR_' + str(args.angRes_in) + 'x' + str(args.angRes_in) + '_' + \
-                               str(args.scale_factor) + 'x/'
-            self.data_list = [data_name]
-        elif args.task == 'RE':
-            self.dataset_dir = args.path_for_test + 'RE_' + str(args.angRes_in) + 'x' + str(args.angRes_in) + '_' + \
-                               str(args.angRes_out) + 'x' + str(args.angRes_out) + '/' + args.data_name + '/'
+        
+        if args.task == 'SR' or args.task == 'RE':
+            self.dataset_dir = args.path_for_test
             self.data_list = [data_name]
 
-        self.file_list = []
-        for data_name in self.data_list:
-            tmp_list = os.listdir(self.dataset_dir + data_name)
-            for index, _ in enumerate(tmp_list):
-                tmp_list[index] = data_name + '/' + tmp_list[index]
+            self.file_list = []
+            for data_name in self.data_list:
+                data_folder = self.dataset_dir
+                tmp_list = os.listdir(data_folder)
+                
+                for index, _ in enumerate(tmp_list):
+                    file_path = os.path.join(data_folder, tmp_list[index])
+                    
+                    # Check if the file has a .h5 extension
+                    if os.path.isfile(file_path) and file_path.endswith('.h5'):
+                        tmp_list[index] = file_path
+                    else:
+                        tmp_list[index] = None
 
-            self.file_list.extend(tmp_list)
+                self.file_list.extend([f for f in tmp_list if f is not None])
 
-        self.item_num = len(self.file_list)
+            self.item_num = len(self.file_list)
+
 
     def __getitem__(self, index):
-        file_name = [self.dataset_dir + self.file_list[index]]
+        file_name = [self.file_list[index]]
         with h5py.File(file_name[0], 'r') as hf:
             Lr_SAI_y = np.array(hf.get('Lr_SAI_y'))
             Hr_SAI_y = np.array(hf.get('Hr_SAI_y'))

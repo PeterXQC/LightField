@@ -115,7 +115,10 @@ def cal_metrics(args, label, out,):
                 else:
                     SSIM[b, u, v] = metrics.structural_similarity(label_y[b, u, :, v, :].numpy(),
                                                                   out_y[b, u, :, v, :].numpy(),
-                                                                  gaussian_weights=True, )
+                                                                  gaussian_weights=True,
+                                                                  data_range=1.0,  # Assuming the pixel values are in the range [0, 1]
+                                                                  )
+
                 pass
 
     if args.task=='RE':

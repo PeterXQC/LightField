@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
+import torchvision.models as models
 import torch.nn.functional as F
 import math
-
 
 class get_model(nn.Module):
 	def __init__(self, args):
@@ -26,25 +26,61 @@ class get_model(nn.Module):
 		self.UpSample = nn.Sequential(*UpSample)
 
 	def forward(self, x, info=None):
+		
 		# Upscaling
 		x_upscale = F.interpolate(x, scale_factor=self.upscale_factor, mode='bicubic', align_corners=False)
 
 		# Reshaping
-		x = SAI2MacPI(x, self.angRes)
-		HFEM_1 = self.HFEM_1(x)
+		x_reshaped = SAI2MacPI(x, self.angRes)
+		
+		HFEM_1 = self.HFEM_1(x_reshaped)
 		HFEM_2 = self.HFEM_2(HFEM_1)
-		HFEM_3 = self.HFEM_3(HFEM_2)
-		HFEM_4 = self.HFEM_4(HFEM_3)
-		HFEM_5 = self.HFEM_5(HFEM_4)
+		HFEM_3 = self.HFEM_3((HFEM_2+x)/2)
+		HFEM_4 = self.HFEM_4((HFEM_3+HFEM_1)/2)
+		HFEM_5 = self.HFEM_5((HFEM_4+HFEM_2)/2)
 
-		# Reshaping
-		x_out = MacPI2SAI(HFEM_5, self.angRes)
-		x_out = self.UpSample(x_out)
+		# Reshaping each HFEM output
+		# HFEM_1_out = SAI2MacPI(HFEM_1, self.angRes)
+		# HFEM_2_out = SAI2MacPI(HFEM_2, self.angRes)
+		# HFEM_3_out = SAI2MacPI(HFEM_3, self.angRes)
+		# HFEM_4_out = SAI2MacPI(HFEM_4, self.angRes)
+		reshaped_out = SAI2MacPI((HFEM_5+HFEM_3)/2, self.angRes)
+		
+		# Concatenate reshaped HFEM outputs with the reshaped input
+		# x_concat = torch.cat([x_reshaped, HFEM_1_out, HFEM_2_out, HFEM_3_out, HFEM_4_out, HFEM_5_out], dim=1)
+		
+		# Continue with the upsampling and rest of the model
+		x_out = self.UpSample(reshaped_out)
 		x_out += x_upscale
+		
 		# 将5x5视角重排，然后用3D卷积
 		x_out_split = LFsplit(x_out, 5)
 		out_new = self.featureFusion(x_out_split)  # sen_add: 增加3D卷积，实现多角度特征融合
-		return out_new
+		
+		return out_new, HFEM_1, HFEM_2, HFEM_3, HFEM_4, HFEM_5
+		
+
+	#def forward(self, x, info=None):
+		
+		# Upscaling
+	#	x_upscale = F.interpolate(x, scale_factor=self.upscale_factor, mode='bicubic', align_corners=False)
+
+		# Reshaping
+	#	x = SAI2MacPI(x, self.angRes)
+	#	HFEM_1 = self.HFEM_1(x)
+	#	HFEM_2 = self.HFEM_2(HFEM_1)
+	#	HFEM_3 = self.HFEM_3(HFEM_2)
+	#	HFEM_4 = self.HFEM_4(HFEM_3)
+	#	HFEM_5 = self.HFEM_5(HFEM_4)
+
+		# Reshaping
+	#	x_out = MacPI2SAI(HFEM_5, self.angRes)
+	#	x_out = self.UpSample(x_out)
+	#	x_out += x_upscale
+		# 将5x5视角重排，然后用3D卷积
+	#	x_out_split = LFsplit(x_out, 5)
+	#	out_new = self.featureFusion(x_out_split)  # sen_add: 增加3D卷积，实现多角度特征融合
+	#	return out_new, HFEM_1, HFEM_2, HFEM_3, HFEM_4, HFEM_5
 
 
 # import matplotlib.pyplot as plt
@@ -357,16 +393,70 @@ def MacPI2EPI(x, angRes):
 def weights_init(m):
     pass
 
+def ssim(img1, img2, window_size=11, size_average=True):
+    C1 = 0.01**2
+    C2 = 0.03**2
+
+    window = torch.ones(window_size, window_size).float().cuda()
+    window = window.unsqueeze(0).unsqueeze(0)  # Add two singleton dimensions: [1, 1, window_size, window_size]
+    window /= window.sum()
+
+    mu1 = F.conv2d(img1, window, padding=window_size//2, groups=1)
+    mu2 = F.conv2d(img2, window, padding=window_size//2, groups=1)
+
+    mu1_sq = mu1.pow(2)
+    mu2_sq = mu2.pow(2)
+    mu1_mu2 = mu1 * mu2
+
+    sigma1_sq = F.conv2d(img1 * img1, window, padding=window_size//2, groups=1) - mu1_sq
+    sigma2_sq = F.conv2d(img2 * img2, window, padding=window_size//2, groups=1) - mu2_sq
+    sigma12 = F.conv2d(img1 * img2, window, padding=window_size//2, groups=1) - mu1_mu2
+
+    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+
+    if size_average:
+        return ssim_map.mean()
+    else:
+        return ssim_map.mean(1).mean(1).mean(1)
+
+class PerceptualLoss(nn.Module):
+    def __init__(self):
+        super(PerceptualLoss, self).__init__()
+        self.vgg = models.vgg16(pretrained=True).features
+        self.vgg.eval()
+        for param in self.vgg.parameters():
+            param.requires_grad = False
+
+    def forward(self, x, y):
+        # Convert grayscale images to "RGB"
+        if x.size(1) == 1:
+            x = x.repeat(1, 3, 1, 1)
+        if y.size(1) == 1:
+            y = y.repeat(1, 3, 1, 1)
+        
+        x_vgg, y_vgg = self.vgg(x), self.vgg(y)
+        loss = nn.functional.l1_loss(x_vgg, y_vgg)
+        return loss
+    
+# Total loss
 class get_loss(nn.Module):
-    def __init__(self,args):
+    def __init__(self, args):
         super(get_loss, self).__init__()
-        self.criterion_Loss = torch.nn.L1Loss()
+        
+        self.criterion_MSE = nn.MSELoss()
+        self.criterion_Perceptual = PerceptualLoss()
+        
+        self.alpha = 0.5  # Weight for SSIM
+        self.beta = 0.5   # Weight for Perceptual loss
+        self.gamma = 1.0  # Weight for MSE
 
     def forward(self, SR, HR, criterion_data=[]):
-        loss = self.criterion_Loss(SR, HR)
-
-        return loss
-
+        loss_mse = self.criterion_MSE(SR, HR)
+        loss_ssim = 1 - ssim(SR, HR)
+        loss_perceptual = self.criterion_Perceptual(SR, HR)
+        
+        total_loss = self.gamma * loss_mse + self.alpha * loss_ssim + self.beta * loss_perceptual
+        return total_loss
 
 def LFsplit(data, angRes):
     b, _, H, W = data.shape

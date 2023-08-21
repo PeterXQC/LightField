@@ -1,0 +1,1 @@
+Namespace(sigma=10, stageNum=3, angResolution=5.0, batchSize=1, cropPatchSize=32, overlap=4, channelNum=1, modelPath='D:\\XuQichen\\LightField\\LFDN\\Test\\model\\lfdn_SASOnly_Res10.pth', dataPath='D:\\XuQichen\\LightField\\LFDN\\LFData\test_data.mat', savePath='D:\\XuQichen\\LightField\\LFDN\\Denoised\\')
