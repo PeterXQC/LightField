@@ -4,6 +4,9 @@ import torchvision.models as models
 import torch.nn.functional as F
 import math
 
+# new import for HAT
+from basicsr.archs.arch_util import to_2tuple
+
 class get_model(nn.Module):
 	def __init__(self, args):
 		super(get_model, self).__init__()
@@ -13,7 +16,9 @@ class get_model(nn.Module):
 		self.upscale_factor = args.scale_factor
 		self.featureFusion = FeatureFusionNet2()
 
-		self.HFEM_1 = HFEM(self.angRes, n_blocks, channels, first=True)
+		self.init_conv = nn.Conv2d(angRes, channels, kernel_size=3, stride=1, padding=1, bias=False)
+
+		self.HFEM_1 = HFEM(self.angRes, n_blocks, channels, first=False)
 		self.HFEM_2 = HFEM(self.angRes, n_blocks, channels, first=False)
 		self.HFEM_3 = HFEM(self.angRes, n_blocks, channels, first=False)
 		self.HFEM_4 = HFEM(self.angRes, n_blocks, channels, first=False)
@@ -24,6 +29,7 @@ class get_model(nn.Module):
 			Upsampler(self.upscale_factor, channels, kernel_size=3, stride=1, dilation=1, padding=1, act=False),
 			nn.Conv2d(channels, 1, kernel_size=1, stride=1, dilation=1, padding=0, bias=False)]
 		self.UpSample = nn.Sequential(*UpSample)
+		
 
 	def forward(self, x, info=None):
 		
@@ -31,56 +37,21 @@ class get_model(nn.Module):
 		x_upscale = F.interpolate(x, scale_factor=self.upscale_factor, mode='bicubic', align_corners=False)
 
 		# Reshaping
-		x_reshaped = SAI2MacPI(x, self.angRes)
-		
-		HFEM_1 = self.HFEM_1(x_reshaped)
+		x = SAI2MacPI(x, self.angRes)
+		HFEM_1 = self.HFEM_1(x)
 		HFEM_2 = self.HFEM_2(HFEM_1)
-		HFEM_3 = self.HFEM_3((HFEM_2+x)/2)
-		HFEM_4 = self.HFEM_4((HFEM_3+HFEM_1)/2)
-		HFEM_5 = self.HFEM_5((HFEM_4+HFEM_2)/2)
+		HFEM_3 = self.HFEM_3(HFEM_2)
+		HFEM_4 = self.HFEM_4(HFEM_3)
+		HFEM_5 = self.HFEM_5(HFEM_4)
 
-		# Reshaping each HFEM output
-		# HFEM_1_out = SAI2MacPI(HFEM_1, self.angRes)
-		# HFEM_2_out = SAI2MacPI(HFEM_2, self.angRes)
-		# HFEM_3_out = SAI2MacPI(HFEM_3, self.angRes)
-		# HFEM_4_out = SAI2MacPI(HFEM_4, self.angRes)
-		reshaped_out = SAI2MacPI((HFEM_5+HFEM_3)/2, self.angRes)
-		
-		# Concatenate reshaped HFEM outputs with the reshaped input
-		# x_concat = torch.cat([x_reshaped, HFEM_1_out, HFEM_2_out, HFEM_3_out, HFEM_4_out, HFEM_5_out], dim=1)
-		
-		# Continue with the upsampling and rest of the model
-		x_out = self.UpSample(reshaped_out)
+		# Reshaping
+		x_out = MacPI2SAI(HFEM_5 + HFEM_1, self.angRes)
+		x_out = self.UpSample(x_out)
 		x_out += x_upscale
-		
 		# 将5x5视角重排，然后用3D卷积
 		x_out_split = LFsplit(x_out, 5)
 		out_new = self.featureFusion(x_out_split)  # sen_add: 增加3D卷积，实现多角度特征融合
-		
 		return out_new, HFEM_1, HFEM_2, HFEM_3, HFEM_4, HFEM_5
-		
-
-	#def forward(self, x, info=None):
-		
-		# Upscaling
-	#	x_upscale = F.interpolate(x, scale_factor=self.upscale_factor, mode='bicubic', align_corners=False)
-
-		# Reshaping
-	#	x = SAI2MacPI(x, self.angRes)
-	#	HFEM_1 = self.HFEM_1(x)
-	#	HFEM_2 = self.HFEM_2(HFEM_1)
-	#	HFEM_3 = self.HFEM_3(HFEM_2)
-	#	HFEM_4 = self.HFEM_4(HFEM_3)
-	#	HFEM_5 = self.HFEM_5(HFEM_4)
-
-		# Reshaping
-	#	x_out = MacPI2SAI(HFEM_5, self.angRes)
-	#	x_out = self.UpSample(x_out)
-	#	x_out += x_upscale
-		# 将5x5视角重排，然后用3D卷积
-	#	x_out_split = LFsplit(x_out, 5)
-	#	out_new = self.featureFusion(x_out_split)  # sen_add: 增加3D卷积，实现多角度特征融合
-	#	return out_new, HFEM_1, HFEM_2, HFEM_3, HFEM_4, HFEM_5
 
 
 # import matplotlib.pyplot as plt
@@ -204,7 +175,9 @@ class HFEM(nn.Module):
 
 		[out, att_weight] = self.attention_fusion(out)
 		out = self.SRG(out)
-		return out
+
+		# allow skip entire HFEM.
+		return out += x
 
 
 class AttentionFusion(nn.Module):
@@ -249,11 +222,15 @@ class ResidualBlock(nn.Module):
 		# initialize_weights([self.conv1, self.conv2], 0.1)
 		self.CALayer = CALayer(n_feat, reduction=int(n_feat//4))
 
+		# add in window attention
+		self.WALayer = WindowAttention(n_feat, 7, 6)
+
 	def forward(self, x):
 		out = self.relu(self.conv1(x))
 		out = self.conv2(out)
-		out = self.CALayer(out)
-		return x + out
+		CAout = self.CALayer(out)
+		WAout = self.WALayer(out)
+		return x + WAout + CAout
 
 
 ## Residual Group
@@ -523,4 +500,74 @@ class FeatureFusionNet2(nn.Module):
         x = self.conv2(x)
         x = nn.functional.relu(x)
         x = self.pool(x)
+        return x
+
+# new element that needs work
+class WindowAttention(nn.Module):
+    r""" Window based multi-head self attention (W-MSA) module with relative position bias.
+    It supports both of shifted and non-shifted window.
+
+    Args:
+        dim (int): Number of input channels.
+        window_size (tuple[int]): The height and width of the window.
+        num_heads (int): Number of attention heads.
+        qkv_bias (bool, optional):  If True, add a learnable bias to query, key, value. Default: True
+        qk_scale (float | None, optional): Override default qk scale of head_dim ** -0.5 if set
+        attn_drop (float, optional): Dropout ratio of attention weight. Default: 0.0
+        proj_drop (float, optional): Dropout ratio of output. Default: 0.0
+    """
+
+    def __init__(self, dim, window_size, num_heads, qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.):
+
+        super().__init__()
+        self.dim = dim
+        self.window_size = window_size  # Wh, Ww
+        self.num_heads = num_heads
+        head_dim = dim // num_heads
+        self.scale = qk_scale or head_dim**-0.5
+
+        # define a parameter table of relative position bias
+        self.relative_position_bias_table = nn.Parameter(
+            torch.zeros((2 * window_size[0] - 1) * (2 * window_size[1] - 1), num_heads))  # 2*Wh-1 * 2*Ww-1, nH
+
+        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.proj = nn.Linear(dim, dim)
+
+        self.proj_drop = nn.Dropout(proj_drop)
+
+        trunc_normal_(self.relative_position_bias_table, std=.02)
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x, rpi, mask=None):
+        """
+        Args:
+            x: input features with shape of (num_windows*b, n, c)
+            mask: (0/-inf) mask with shape of (num_windows, Wh*Ww, Wh*Ww) or None
+        """
+        b_, n, c = x.shape
+        qkv = self.qkv(x).reshape(b_, n, 3, self.num_heads, c // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
+
+        q = q * self.scale
+        attn = (q @ k.transpose(-2, -1))
+
+        relative_position_bias = self.relative_position_bias_table[rpi.view(-1)].view(
+            self.window_size[0] * self.window_size[1], self.window_size[0] * self.window_size[1], -1)  # Wh*Ww,Wh*Ww,nH
+        relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
+        attn = attn + relative_position_bias.unsqueeze(0)
+
+        if mask is not None:
+            nw = mask.shape[0]
+            attn = attn.view(b_ // nw, nw, self.num_heads, n, n) + mask.unsqueeze(1).unsqueeze(0)
+            attn = attn.view(-1, self.num_heads, n, n)
+            attn = self.softmax(attn)
+        else:
+            attn = self.softmax(attn)
+
+        attn = self.attn_drop(attn)
+
+        x = (attn @ v).transpose(1, 2).reshape(b_, n, c)
+        x = self.proj(x)
+        x = self.proj_drop(x)
         return x
