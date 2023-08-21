@@ -5,7 +5,8 @@ import torch.nn.functional as F
 import math
 
 # new import for HAT
-from basicsr.archs.arch_util import to_2tuple
+from basicsr.archs.arch_util import to_2tuple, trunc_normal_
+from einops import rearrange
 
 class get_model(nn.Module):
 	def __init__(self, args):
@@ -13,16 +14,18 @@ class get_model(nn.Module):
 		n_blocks = 15
 		channels = 64
 		self.angRes = args.angRes_in
+		self.window_size = 7
 		self.upscale_factor = args.scale_factor
 		self.featureFusion = FeatureFusionNet2()
+		self.rpi = self.calculate_rpi_sa()
 
-		self.init_conv = nn.Conv2d(angRes, channels, kernel_size=3, stride=1, padding=1, bias=False)
+		self.init_conv = nn.Conv2d(1, channels, kernel_size=3, stride=1, padding=1, bias=False)
 
-		self.HFEM_1 = HFEM(self.angRes, n_blocks, channels, first=False)
-		self.HFEM_2 = HFEM(self.angRes, n_blocks, channels, first=False)
-		self.HFEM_3 = HFEM(self.angRes, n_blocks, channels, first=False)
-		self.HFEM_4 = HFEM(self.angRes, n_blocks, channels, first=False)
-		self.HFEM_5 = HFEM(self.angRes, n_blocks, channels, first=False)
+		self.HFEM_1 = HFEM(self.angRes, n_blocks, channels, self.window_size, first=False)
+		self.HFEM_2 = HFEM(self.angRes, n_blocks, channels, self.window_size, first=False)
+		self.HFEM_3 = HFEM(self.angRes, n_blocks, channels, self.window_size, first=False)
+		self.HFEM_4 = HFEM(self.angRes, n_blocks, channels, self.window_size, first=False)
+		self.HFEM_5 = HFEM(self.angRes, n_blocks, channels, self.window_size, first=False)
 
 		# define tail module for upsamling
 		UpSample = [
@@ -32,26 +35,45 @@ class get_model(nn.Module):
 		
 
 	def forward(self, x, info=None):
-		
+
 		# Upscaling
 		x_upscale = F.interpolate(x, scale_factor=self.upscale_factor, mode='bicubic', align_corners=False)
 
 		# Reshaping
-		x = SAI2MacPI(x, self.angRes)
-		HFEM_1 = self.HFEM_1(x)
-		HFEM_2 = self.HFEM_2(HFEM_1)
-		HFEM_3 = self.HFEM_3(HFEM_2)
-		HFEM_4 = self.HFEM_4(HFEM_3)
-		HFEM_5 = self.HFEM_5(HFEM_4)
+		x_reshaped = SAI2MacPI(x, self.angRes)
+
+		# extract super-shallow features
+		x = self.init_conv(x_reshaped)
+
+		HFEM_1 = self.HFEM_1(x, self.rpi)
+		HFEM_2 = self.HFEM_2(HFEM_1, self.rpi)
+		HFEM_3 = self.HFEM_3(HFEM_2, self.rpi)
+		HFEM_4 = self.HFEM_4(HFEM_3, self.rpi)
+		HFEM_5 = self.HFEM_5(HFEM_4, self.rpi)
 
 		# Reshaping
-		x_out = MacPI2SAI(HFEM_5 + HFEM_1, self.angRes)
+		x_out = MacPI2SAI(HFEM_5 + x, self.angRes)
 		x_out = self.UpSample(x_out)
 		x_out += x_upscale
 		# 将5x5视角重排，然后用3D卷积
 		x_out_split = LFsplit(x_out, 5)
 		out_new = self.featureFusion(x_out_split)  # sen_add: 增加3D卷积，实现多角度特征融合
 		return out_new, HFEM_1, HFEM_2, HFEM_3, HFEM_4, HFEM_5
+	
+	# calculate rpi for Window attention
+	def calculate_rpi_sa(self):
+		# calculate relative position index for SA
+		coords_h = torch.arange(self.window_size)
+		coords_w = torch.arange(self.window_size)
+		coords = torch.stack(torch.meshgrid([coords_h, coords_w]))  # 2, Wh, Ww
+		coords_flatten = torch.flatten(coords, 1)  # 2, Wh*Ww
+		relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # 2, Wh*Ww, Wh*Ww
+		relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
+		relative_coords[:, :, 0] += self.window_size - 1  # shift to start from 0
+		relative_coords[:, :, 1] += self.window_size - 1
+		relative_coords[:, :, 0] *= 2 * self.window_size - 1
+		relative_position_index = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
+		return relative_position_index
 
 
 # import matplotlib.pyplot as plt
@@ -60,7 +82,7 @@ class get_model(nn.Module):
 # plt.show()
 
 class HFEM(nn.Module):
-	def __init__(self, angRes, n_blocks, channels, first=False):
+	def __init__(self, angRes, n_blocks, channels, window_size, first=False):
 		super(HFEM, self).__init__()
 		self.first = first 
 		self.n_blocks = n_blocks
@@ -138,12 +160,10 @@ class HFEM(nn.Module):
 		self.attention_fusion = AttentionFusion(channels)
 											
 		# define  module spatial residual group
-		self.SRG = nn.Sequential(
-			nn.Conv2d(5*channels, channels, kernel_size=1, stride =1, dilation=1, padding=0, bias=False),
-			ResidualGroup(self.n_blocks, channels, kernel_size=3, stride=1, dilation=int(angRes), padding=int(angRes))
-		)
+		self.conv_RG = nn.Conv2d(5*channels, channels, kernel_size=1, stride =1, dilation=1, padding=0, bias=False)
+		self.RG = ResidualGroup(self.n_blocks, channels, window_size, kernel_size=3, stride=1, dilation=int(angRes), padding=int(angRes), )
 
-	def forward(self, x):
+	def forward(self, x, rpi):
 		# MO-EPI feature extractor
 		data_0, data_90, data_45, data_135 = MacPI2EPI(x, self.angRes)
 
@@ -174,10 +194,11 @@ class HFEM(nn.Module):
 		out = torch.cat([x_epi.unsqueeze(1), out], 1)
 
 		[out, att_weight] = self.attention_fusion(out)
-		out = self.SRG(out)
+		out = self.conv_RG(out)
+		out = self.RG(out, rpi)
 
 		# allow skip entire HFEM.
-		return out += x
+		return out + x
 
 
 class AttentionFusion(nn.Module):
@@ -213,7 +234,7 @@ class AttentionFusion(nn.Module):
 
 ## Residual Channel Attention Block (RCAB)
 class ResidualBlock(nn.Module):
-	def __init__(self, n_feat, kernel_size, stride, dilation, padding):
+	def __init__(self, n_feat, kernel_size, stride, dilation, padding, window_size):
 		super(ResidualBlock, self).__init__()
 		self.conv1 = nn.Conv2d(n_feat, n_feat, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding, bias=True)
 		self.conv2 = nn.Conv2d(n_feat, n_feat, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding, bias=True)
@@ -223,30 +244,30 @@ class ResidualBlock(nn.Module):
 		self.CALayer = CALayer(n_feat, reduction=int(n_feat//4))
 
 		# add in window attention
-		self.WALayer = WindowAttention(n_feat, 7, 6)
+		self.WALayer = WindowAttention(n_feat, to_2tuple(window_size), 6)
 
-	def forward(self, x):
+	def forward(self, x, rpi):
 		out = self.relu(self.conv1(x))
 		out = self.conv2(out)
 		CAout = self.CALayer(out)
-		WAout = self.WALayer(out)
+		print(out.shape)
+		WAout = self.WALayer(out, rpi)
 		return x + WAout + CAout
 
 
 ## Residual Group
 class ResidualGroup(nn.Module):
-	def __init__(self, n_blocks, n_feat, kernel_size, stride, dilation, padding):
+	def __init__(self, n_blocks, n_feat, window_size, kernel_size, stride, dilation, padding):
 		super(ResidualGroup, self).__init__()
-		self.fea_resblock = make_layer(ResidualBlock, n_feat, n_blocks,kernel_size, stride, dilation, padding)
+		self.fea_resblock = RGSequential(n_feat, n_blocks, kernel_size, stride, dilation, padding, window_size)
 		self.conv = nn.Conv2d(n_feat, n_feat,  kernel_size=kernel_size, stride=stride, dilation=dilation,
 							  padding=padding, bias=True)
 
-	def forward(self, x):
-		res = self.fea_resblock(x)
+	def forward(self, x, rpi):
+		res = self.fea_resblock(x, rpi)
 		res = self.conv(res)
 		res += x
 		return res
-
 
 def make_layer(block, nf, n_layers,kernel_size, stride, dilation, padding ):
 	layers = []
@@ -545,6 +566,7 @@ class WindowAttention(nn.Module):
             x: input features with shape of (num_windows*b, n, c)
             mask: (0/-inf) mask with shape of (num_windows, Wh*Ww, Wh*Ww) or None
         """
+
         b_, n, c = x.shape
         qkv = self.qkv(x).reshape(b_, n, 3, self.num_heads, c // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
@@ -571,3 +593,160 @@ class WindowAttention(nn.Module):
         x = self.proj(x)
         x = self.proj_drop(x)
         return x
+    
+# in Residule group, we ran res block n_bock many times. 
+# this does same thing without nn.sequential to allow more parameters in forward.
+class RGSequential(nn.Module):
+    def __init__(self, n_feat, n_blocks, kernel_size, stride, dilation, padding, window_size):
+        super(RGSequential, self).__init__()
+        
+        # Define the layer you want to repeat
+        block = ResidualBlock(n_feat, kernel_size, stride, dilation, padding, window_size)
+        
+        # Use a ModuleList to store repeated layers
+        self.layers = nn.ModuleList([block for _ in range(n_blocks)])
+        
+    def forward(self, x, rpi):
+        for layer in self.layers:
+            x = layer(x, rpi)
+        return x
+    
+class OCAB(nn.Module):
+    # overlapping cross-attention block
+
+    def __init__(self, dim,
+                input_resolution,
+                window_size,
+                overlap_ratio,
+                num_heads,
+                qkv_bias=True,
+                qk_scale=None,
+                mlp_ratio=2,
+                norm_layer=nn.LayerNorm
+                ):
+
+        super().__init__()
+        self.dim = dim
+        self.input_resolution = input_resolution
+        self.window_size = window_size
+        self.num_heads = num_heads
+        head_dim = dim // num_heads
+        self.scale = qk_scale or head_dim**-0.5
+        self.overlap_win_size = int(window_size * overlap_ratio) + window_size
+
+        self.norm1 = norm_layer(dim)
+        self.qkv = nn.Linear(dim, dim * 3,  bias=qkv_bias)
+        self.unfold = nn.Unfold(kernel_size=(self.overlap_win_size, self.overlap_win_size), stride=window_size, padding=(self.overlap_win_size-window_size)//2)
+
+        # define a parameter table of relative position bias
+        self.relative_position_bias_table = nn.Parameter(
+            torch.zeros((window_size + self.overlap_win_size - 1) * (window_size + self.overlap_win_size - 1), num_heads))  # 2*Wh-1 * 2*Ww-1, nH
+
+        trunc_normal_(self.relative_position_bias_table, std=.02)
+        self.softmax = nn.Softmax(dim=-1)
+
+        self.proj = nn.Linear(dim,dim)
+
+        self.norm2 = norm_layer(dim)
+        mlp_hidden_dim = int(dim * mlp_ratio)
+        self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU)
+
+    def forward(self, x, x_size, rpi):
+        h, w = x_size
+        b, _, c = x.shape
+
+        shortcut = x
+        x = self.norm1(x)
+        x = x.view(b, h, w, c)
+
+        qkv = self.qkv(x).reshape(b, h, w, 3, c).permute(3, 0, 4, 1, 2) # 3, b, c, h, w
+        q = qkv[0].permute(0, 2, 3, 1) # b, h, w, c
+        kv = torch.cat((qkv[1], qkv[2]), dim=1) # b, 2*c, h, w
+
+        # partition windows
+        q_windows = window_partition(q, self.window_size)  # nw*b, window_size, window_size, c
+        q_windows = q_windows.view(-1, self.window_size * self.window_size, c)  # nw*b, window_size*window_size, c
+
+        kv_windows = self.unfold(kv) # b, c*w*w, nw
+        kv_windows = rearrange(kv_windows, 'b (nc ch owh oww) nw -> nc (b nw) (owh oww) ch', nc=2, ch=c, owh=self.overlap_win_size, oww=self.overlap_win_size).contiguous() # 2, nw*b, ow*ow, c
+        k_windows, v_windows = kv_windows[0], kv_windows[1] # nw*b, ow*ow, c
+
+        b_, nq, _ = q_windows.shape
+        _, n, _ = k_windows.shape
+        d = self.dim // self.num_heads
+        q = q_windows.reshape(b_, nq, self.num_heads, d).permute(0, 2, 1, 3) # nw*b, nH, nq, d
+        k = k_windows.reshape(b_, n, self.num_heads, d).permute(0, 2, 1, 3) # nw*b, nH, n, d
+        v = v_windows.reshape(b_, n, self.num_heads, d).permute(0, 2, 1, 3) # nw*b, nH, n, d
+
+        q = q * self.scale
+        attn = (q @ k.transpose(-2, -1))
+
+        relative_position_bias = self.relative_position_bias_table[rpi.view(-1)].view(
+            self.window_size * self.window_size, self.overlap_win_size * self.overlap_win_size, -1)  # ws*ws, wse*wse, nH
+        relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, ws*ws, wse*wse
+        attn = attn + relative_position_bias.unsqueeze(0)
+
+        attn = self.softmax(attn)
+        attn_windows = (attn @ v).transpose(1, 2).reshape(b_, nq, self.dim)
+
+        # merge windows
+        attn_windows = attn_windows.view(-1, self.window_size, self.window_size, self.dim)
+        x = window_reverse(attn_windows, self.window_size, h, w)  # b h w c
+        x = x.view(b, h * w, self.dim)
+
+        x = self.proj(x) + shortcut
+
+        x = x + self.mlp(self.norm2(x))
+        return x
+
+def window_partition(x, window_size):
+    """
+    Args:
+        x: (b, h, w, c)
+        window_size (int): window size
+
+    Returns:
+        windows: (num_windows*b, window_size, window_size, c)
+    """
+    
+
+    b, h, w, c = x.shape
+    x = x.view(b, h // window_size, window_size, w // window_size, window_size, c)
+    windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, c)
+    return windows
+
+def window_reverse(windows, window_size, h, w):
+    """
+    Args:
+        windows: (num_windows*b, window_size, window_size, c)
+        window_size (int): Window size
+        h (int): Height of image
+        w (int): Width of image
+
+    Returns:
+        x: (b, h, w, c)
+    """
+    b = int(windows.shape[0] / (h * w / window_size / window_size))
+    x = windows.view(b, h // window_size, w // window_size, window_size, window_size, -1)
+    x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(b, h, w, -1)
+    return x
+
+class Mlp(nn.Module):
+
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
+        super().__init__()
+        out_features = out_features or in_features
+        hidden_features = hidden_features or in_features
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.act = act_layer()
+        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.drop(x)
+        x = self.fc2(x)
+        x = self.drop(x)
+        return x
+

@@ -7,7 +7,7 @@ parser.add_argument('--task', type=str, default='SR', help='SR, RE')
 parser.add_argument("--angRes", type=int, default=5, help="angular resolution")
 parser.add_argument("--scale_factor", type=int, default=4, help="4, 2")
 
-parser.add_argument('--model_name', type=str, default='HLFSR', help="model name")
+parser.add_argument('--model_name', type=str, default='HAT_HLFSR', help="model name")
 parser.add_argument("--use_pre_ckpt", type=bool, default=False, help="use pre model ckpt")
 parser.add_argument("--path_pre_pth", type=str, default='./pth/', help="path for pre model ckpt")
 parser.add_argument('--data_name', type=str, default='ALL',

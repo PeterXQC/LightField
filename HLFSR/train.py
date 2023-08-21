@@ -275,7 +275,7 @@ def test(test_loader, device, net, idx_epoch, save_dir=None):
 if __name__ == '__main__':
     from option import args
 
-    args.model_name = 'HLFSR'
+    args.model_name = 'HAT_HLFSR'
     args.angRes = 5
     args.scale_factor = 4
     args.batch_size = 1

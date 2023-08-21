@@ -32,6 +32,8 @@ class get_model(nn.Module):
 
 		# Reshaping
 		x_reshaped = SAI2MacPI(x, self.angRes)
+
+		print(x_reshaped.shape)
 		
 		HFEM_1 = self.HFEM_1(x_reshaped)
 		HFEM_2 = self.HFEM_2(HFEM_1)
