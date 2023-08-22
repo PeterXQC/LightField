@@ -250,8 +250,16 @@ class ResidualBlock(nn.Module):
 		out = self.relu(self.conv1(x))
 		out = self.conv2(out)
 		CAout = self.CALayer(out)
-		# print(out.shape)
-		# WAout = self.WALayer(out, rpi)
+
+		# fits the requirement for window_partition and thus WALayer
+		# go from (batch, channel, height, width) to (batch, height, width, channel)
+		out_WA = out.permute(0, 2, 3, 1)
+		# default window size set to 5
+		out_WA = window_partition(out_WA, 5)
+		# output format is (num_windows*b, window_size, window_size, c)
+		# reshape into (num_windows*b, n, c)
+		outWA = out_WA.reshape(1, 64*320, 320)
+		# WAout = self.WALayer(out_WA, rpi)
 		return x + CAout # + WAout
 
 
@@ -708,8 +716,6 @@ def window_partition(x, window_size):
     Returns:
         windows: (num_windows*b, window_size, window_size, c)
     """
-    
-
     b, h, w, c = x.shape
     x = x.view(b, h // window_size, window_size, w // window_size, window_size, c)
     windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, c)
