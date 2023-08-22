@@ -244,15 +244,15 @@ class ResidualBlock(nn.Module):
 		self.CALayer = CALayer(n_feat, reduction=int(n_feat//4))
 
 		# add in window attention
-		self.WALayer = WindowAttention(n_feat, to_2tuple(window_size), 6)
+		# self.WALayer = WindowAttention(n_feat, to_2tuple(window_size), 6)
 
 	def forward(self, x, rpi):
 		out = self.relu(self.conv1(x))
 		out = self.conv2(out)
 		CAout = self.CALayer(out)
 		print(out.shape)
-		WAout = self.WALayer(out, rpi)
-		return x + WAout + CAout
+		# WAout = self.WALayer(out, rpi)
+		return x + CAout # + WAout
 
 
 ## Residual Group
