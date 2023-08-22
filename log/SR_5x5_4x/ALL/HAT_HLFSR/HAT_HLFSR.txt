@@ -180,3 +180,135 @@ Model Initial ...
 Start training...
 2023-08-21 23:03:56,075 - HAT_HLFSR - INFO - 
 Epoch 1 /100:
+2023-08-21 23:32:44,706 - HAT_HLFSR - INFO - 
+Load Training Dataset ...
+2023-08-21 23:32:44,708 - HAT_HLFSR - INFO - The number of training data is: 700
+2023-08-21 23:32:44,708 - HAT_HLFSR - INFO - 
+Load Validation Dataset ...
+2023-08-21 23:32:44,906 - HAT_HLFSR - INFO - The number of validation data is: 28
+2023-08-21 23:32:44,907 - HAT_HLFSR - INFO - 
+Model Initial ...
+2023-08-21 23:32:45,390 - HAT_HLFSR - INFO - Do not use pre-trained model!
+2023-08-21 23:32:45,513 - HAT_HLFSR - INFO - PARAMETER ...
+2023-08-21 23:32:45,514 - HAT_HLFSR - INFO - Namespace(task='SR', scale_factor=4, model_name='HAT_HLFSR', use_pre_ckpt=False, path_pre_pth='./pth/', data_name='ALL', path_for_train='D:\\DATASET\\DatasetWithNoise\\train', path_for_test='D:\\DATASET\\DatasetWithNoise\\test', path_log='D:\\XuQichen\\LightField\\log\\', batch_size=1, lr=0.0002, decay_rate=0.0001, n_steps=5, gamma=0.5, epoch=100, device='cuda:0', num_workers=8, local_rank=0, angRes_in=5, angRes_out=5, patch_size_for_test=1, stride_for_test=16, minibatch_for_test=1, angRes=5)
+2023-08-21 23:32:46,500 - HAT_HLFSR - INFO - 
+Start training...
+2023-08-21 23:32:46,500 - HAT_HLFSR - INFO - 
+Epoch 1 /100:
+2023-08-22 10:29:32,271 - HAT_HLFSR - INFO - 
+Load Training Dataset ...
+2023-08-22 10:29:32,273 - HAT_HLFSR - INFO - The number of training data is: 700
+2023-08-22 10:29:32,274 - HAT_HLFSR - INFO - 
+Load Validation Dataset ...
+2023-08-22 10:29:32,471 - HAT_HLFSR - INFO - The number of validation data is: 28
+2023-08-22 10:29:32,472 - HAT_HLFSR - INFO - 
+Model Initial ...
+2023-08-22 10:29:32,940 - HAT_HLFSR - INFO - Do not use pre-trained model!
+2023-08-22 10:29:33,063 - HAT_HLFSR - INFO - PARAMETER ...
+2023-08-22 10:29:33,063 - HAT_HLFSR - INFO - Namespace(task='SR', scale_factor=4, model_name='HAT_HLFSR', use_pre_ckpt=False, path_pre_pth='./pth/', data_name='ALL', path_for_train='D:\\DATASET\\DatasetWithNoise\\train', path_for_test='D:\\DATASET\\DatasetWithNoise\\test', path_log='D:\\XuQichen\\LightField\\log\\', batch_size=1, lr=0.0002, decay_rate=0.0001, n_steps=5, gamma=0.5, epoch=100, device='cuda:0', num_workers=8, local_rank=0, angRes_in=5, angRes_out=5, patch_size_for_test=1, stride_for_test=16, minibatch_for_test=1, angRes=5)
+2023-08-22 10:29:34,045 - HAT_HLFSR - INFO - 
+Start training...
+2023-08-22 10:29:34,045 - HAT_HLFSR - INFO - 
+Epoch 1 /100:
+2023-08-22 10:30:43,644 - HAT_HLFSR - INFO - 
+Load Training Dataset ...
+2023-08-22 10:30:43,647 - HAT_HLFSR - INFO - The number of training data is: 700
+2023-08-22 10:30:43,647 - HAT_HLFSR - INFO - 
+Load Validation Dataset ...
+2023-08-22 10:30:43,843 - HAT_HLFSR - INFO - The number of validation data is: 28
+2023-08-22 10:30:43,843 - HAT_HLFSR - INFO - 
+Model Initial ...
+2023-08-22 10:30:44,320 - HAT_HLFSR - INFO - Do not use pre-trained model!
+2023-08-22 10:30:44,448 - HAT_HLFSR - INFO - PARAMETER ...
+2023-08-22 10:30:44,448 - HAT_HLFSR - INFO - Namespace(task='SR', scale_factor=4, model_name='HAT_HLFSR', use_pre_ckpt=False, path_pre_pth='./pth/', data_name='ALL', path_for_train='D:\\DATASET\\DatasetWithNoise\\train', path_for_test='D:\\DATASET\\DatasetWithNoise\\test', path_log='D:\\XuQichen\\LightField\\log\\', batch_size=1, lr=0.0002, decay_rate=0.0001, n_steps=5, gamma=0.5, epoch=100, device='cuda:0', num_workers=8, local_rank=0, angRes_in=5, angRes_out=5, patch_size_for_test=1, stride_for_test=16, minibatch_for_test=1, angRes=5)
+2023-08-22 10:30:45,431 - HAT_HLFSR - INFO - 
+Start training...
+2023-08-22 10:30:45,431 - HAT_HLFSR - INFO - 
+Epoch 1 /100:
+2023-08-22 10:39:38,454 - HAT_HLFSR - INFO - The 1th Train, loss is: 0.29932, psnr is 20.79012, ssim is 0.54581
+2023-08-22 10:39:38,543 - HAT_HLFSR - INFO - Saving the epoch_01 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_01_model.pth
+2023-08-22 10:39:58,343 - HAT_HLFSR - INFO - The 1th Test on ALL, psnr/ssim is 20.79/0.536
+2023-08-22 10:39:58,343 - HAT_HLFSR - INFO - The mean psnr on testsets is 20.79295, mean ssim is 0.53628
+2023-08-22 10:39:58,493 - HAT_HLFSR - INFO - 
+Epoch 2 /100:
+2023-08-22 10:48:50,274 - HAT_HLFSR - INFO - The 2th Train, loss is: 0.27501, psnr is 21.62869, ssim is 0.58125
+2023-08-22 10:48:50,339 - HAT_HLFSR - INFO - Saving the epoch_02 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_02_model.pth
+2023-08-22 10:49:00,292 - HAT_HLFSR - INFO - The 2th Test on ALL, psnr/ssim is 20.15/0.559
+2023-08-22 10:49:00,292 - HAT_HLFSR - INFO - The mean psnr on testsets is 20.15399, mean ssim is 0.55923
+2023-08-22 10:49:00,310 - HAT_HLFSR - INFO - 
+Epoch 3 /100:
+2023-08-22 10:57:53,294 - HAT_HLFSR - INFO - The 3th Train, loss is: 0.26049, psnr is 21.85676, ssim is 0.60295
+2023-08-22 10:57:53,360 - HAT_HLFSR - INFO - Saving the epoch_03 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_03_model.pth
+2023-08-22 10:58:03,087 - HAT_HLFSR - INFO - The 3th Test on ALL, psnr/ssim is 21.49/0.589
+2023-08-22 10:58:03,087 - HAT_HLFSR - INFO - The mean psnr on testsets is 21.48992, mean ssim is 0.58867
+2023-08-22 10:58:03,089 - HAT_HLFSR - INFO - 
+Epoch 4 /100:
+2023-08-22 11:06:54,079 - HAT_HLFSR - INFO - The 4th Train, loss is: 0.25435, psnr is 21.94891, ssim is 0.61261
+2023-08-22 11:06:54,145 - HAT_HLFSR - INFO - Saving the epoch_04 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_04_model.pth
+2023-08-22 11:07:04,164 - HAT_HLFSR - INFO - The 4th Test on ALL, psnr/ssim is 21.41/0.603
+2023-08-22 11:07:04,164 - HAT_HLFSR - INFO - The mean psnr on testsets is 21.41245, mean ssim is 0.60266
+2023-08-22 11:07:04,166 - HAT_HLFSR - INFO - 
+Epoch 5 /100:
+2023-08-22 11:15:56,413 - HAT_HLFSR - INFO - The 5th Train, loss is: 0.24268, psnr is 22.31125, ssim is 0.63141
+2023-08-22 11:15:56,480 - HAT_HLFSR - INFO - Saving the epoch_05 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_05_model.pth
+2023-08-22 11:16:06,404 - HAT_HLFSR - INFO - The 5th Test on ALL, psnr/ssim is 21.79/0.611
+2023-08-22 11:16:06,404 - HAT_HLFSR - INFO - The mean psnr on testsets is 21.79165, mean ssim is 0.61077
+2023-08-22 11:16:06,406 - HAT_HLFSR - INFO - 
+Epoch 6 /100:
+2023-08-22 11:25:00,163 - HAT_HLFSR - INFO - The 6th Train, loss is: 0.23385, psnr is 22.63584, ssim is 0.64470
+2023-08-22 11:25:00,231 - HAT_HLFSR - INFO - Saving the epoch_06 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_06_model.pth
+2023-08-22 11:25:10,171 - HAT_HLFSR - INFO - The 6th Test on ALL, psnr/ssim is 21.92/0.624
+2023-08-22 11:25:10,171 - HAT_HLFSR - INFO - The mean psnr on testsets is 21.91812, mean ssim is 0.62379
+2023-08-22 11:25:10,173 - HAT_HLFSR - INFO - 
+Epoch 7 /100:
+2023-08-22 11:34:03,756 - HAT_HLFSR - INFO - The 7th Train, loss is: 0.23114, psnr is 22.69396, ssim is 0.64822
+2023-08-22 11:34:03,823 - HAT_HLFSR - INFO - Saving the epoch_07 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_07_model.pth
+2023-08-22 11:34:13,824 - HAT_HLFSR - INFO - The 7th Test on ALL, psnr/ssim is 21.98/0.628
+2023-08-22 11:34:13,824 - HAT_HLFSR - INFO - The mean psnr on testsets is 21.97910, mean ssim is 0.62808
+2023-08-22 11:34:13,826 - HAT_HLFSR - INFO - 
+Epoch 8 /100:
+2023-08-22 11:43:07,564 - HAT_HLFSR - INFO - The 8th Train, loss is: 0.22756, psnr is 22.88817, ssim is 0.65406
+2023-08-22 11:43:07,636 - HAT_HLFSR - INFO - Saving the epoch_08 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_08_model.pth
+2023-08-22 11:43:17,671 - HAT_HLFSR - INFO - The 8th Test on ALL, psnr/ssim is 22.18/0.633
+2023-08-22 11:43:17,672 - HAT_HLFSR - INFO - The mean psnr on testsets is 22.18101, mean ssim is 0.63340
+2023-08-22 11:43:17,674 - HAT_HLFSR - INFO - 
+Epoch 9 /100:
+2023-08-22 11:52:10,959 - HAT_HLFSR - INFO - The 9th Train, loss is: 0.22576, psnr is 22.95400, ssim is 0.65773
+2023-08-22 11:52:11,025 - HAT_HLFSR - INFO - Saving the epoch_09 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_09_model.pth
+2023-08-22 11:52:21,056 - HAT_HLFSR - INFO - The 9th Test on ALL, psnr/ssim is 22.24/0.635
+2023-08-22 11:52:21,056 - HAT_HLFSR - INFO - The mean psnr on testsets is 22.23921, mean ssim is 0.63510
+2023-08-22 11:52:21,058 - HAT_HLFSR - INFO - 
+Epoch 10 /100:
+2023-08-22 12:01:14,329 - HAT_HLFSR - INFO - The 10th Train, loss is: 0.22272, psnr is 23.10479, ssim is 0.66199
+2023-08-22 12:01:14,396 - HAT_HLFSR - INFO - Saving the epoch_10 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_10_model.pth
+2023-08-22 12:01:24,452 - HAT_HLFSR - INFO - The 10th Test on ALL, psnr/ssim is 21.89/0.638
+2023-08-22 12:01:24,452 - HAT_HLFSR - INFO - The mean psnr on testsets is 21.88731, mean ssim is 0.63820
+2023-08-22 12:01:24,454 - HAT_HLFSR - INFO - 
+Epoch 11 /100:
+2023-08-22 12:10:16,109 - HAT_HLFSR - INFO - The 11th Train, loss is: 0.21944, psnr is 23.24264, ssim is 0.66752
+2023-08-22 12:10:16,176 - HAT_HLFSR - INFO - Saving the epoch_11 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_11_model.pth
+2023-08-22 12:10:38,805 - HAT_HLFSR - INFO - The 11th Test on ALL, psnr/ssim is 22.27/0.645
+2023-08-22 12:10:38,806 - HAT_HLFSR - INFO - The mean psnr on testsets is 22.27241, mean ssim is 0.64547
+2023-08-22 12:10:38,832 - HAT_HLFSR - INFO - 
+Epoch 12 /100:
+2023-08-22 16:23:51,020 - HAT_HLFSR - INFO - 
+Load Training Dataset ...
+2023-08-22 16:23:51,023 - HAT_HLFSR - INFO - The number of training data is: 700
+2023-08-22 16:23:51,023 - HAT_HLFSR - INFO - 
+Load Validation Dataset ...
+2023-08-22 16:23:51,215 - HAT_HLFSR - INFO - The number of validation data is: 28
+2023-08-22 16:23:51,216 - HAT_HLFSR - INFO - 
+Model Initial ...
+2023-08-22 16:23:51,801 - HAT_HLFSR - INFO - Do not use pre-trained model!
+2023-08-22 16:23:51,922 - HAT_HLFSR - INFO - PARAMETER ...
+2023-08-22 16:23:51,922 - HAT_HLFSR - INFO - Namespace(task='SR', scale_factor=4, model_name='HAT_HLFSR', use_pre_ckpt=False, path_pre_pth='./pth/', data_name='ALL', path_for_train='D:\\DATASET\\DatasetWithNoise\\train', path_for_test='D:\\DATASET\\DatasetWithNoise\\test', path_log='D:\\XuQichen\\LightField\\log\\', batch_size=1, lr=0.0002, decay_rate=0.0001, n_steps=5, gamma=0.5, epoch=100, device='cuda:0', num_workers=8, local_rank=0, angRes_in=5, angRes_out=5, patch_size_for_test=1, stride_for_test=16, minibatch_for_test=1, angRes=5)
+2023-08-22 16:23:52,953 - HAT_HLFSR - INFO - 
+Start training...
+2023-08-22 16:23:52,954 - HAT_HLFSR - INFO - 
+Epoch 1 /100:
+2023-08-22 16:33:25,150 - HAT_HLFSR - INFO - The 1th Train, loss is: 0.30062, psnr is 20.73828, ssim is 0.54241
+2023-08-22 16:33:25,219 - HAT_HLFSR - INFO - Saving the epoch_01 model at D:\XuQichen\LightField\log\SR_5x5_4x\ALL\HAT_HLFSR\checkpoints/HAT_HLFSR_5x5_4x_epoch_01_model.pth
+2023-08-22 16:33:42,709 - HAT_HLFSR - INFO - The 1th Test on ALL, psnr/ssim is 21.00/0.537
+2023-08-22 16:33:42,710 - HAT_HLFSR - INFO - The mean psnr on testsets is 20.99764, mean ssim is 0.53659
+2023-08-22 16:33:42,713 - HAT_HLFSR - INFO - 
+Epoch 2 /100:

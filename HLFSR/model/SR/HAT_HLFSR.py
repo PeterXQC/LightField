@@ -250,7 +250,7 @@ class ResidualBlock(nn.Module):
 		out = self.relu(self.conv1(x))
 		out = self.conv2(out)
 		CAout = self.CALayer(out)
-		print(out.shape)
+		# print(out.shape)
 		# WAout = self.WALayer(out, rpi)
 		return x + CAout # + WAout
 
